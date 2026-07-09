@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Confirmed · Ananya</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,600,700|poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/js/ananya.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div id="conf-root"></div>
+</main>
+
+<div id="site-footer"></div>
+
+<script>
+window.PAGE_INIT = function () {
+  const A = window.Ananya;
+  const o = A.orders.byId(A.qs('id'));
+  const root = document.getElementById('conf-root');
+  if (!o) { root.innerHTML = '<div class="card text-center py-16"><p class="font-serif text-xl text-maroon">Order not found</p><a href="shop.html" class="btn-maroon mt-4">Continue shopping</a></div>'; return; }
+
+  const rows = o.items.map(i => `
+    <tr class="border-b border-gold/10">
+      <td class="py-3 pr-3"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${i.image}" class="max-h-full max-w-full object-contain"></div><span class="text-sm text-maroon">${A.esc(i.name)}</span></div></td>
+      <td class="py-3 text-center text-sm text-stone-500">${i.qty}</td>
+      <td class="py-3 text-right text-sm font-medium text-maroon whitespace-nowrap">${A.money(i.price*i.qty)}</td>
+    </tr>`).join('');
+
+  root.innerHTML = `
+  <div class="text-center mb-8">
+    <div class="w-20 h-20 rounded-full bg-green-100 mx-auto flex items-center justify-center text-green-600 mb-4"><svg class="w-11 h-11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+    <h1 class="font-serif text-3xl text-maroon">Thank you for your order!</h1>
+    <p class="text-stone-500 mt-2">Your order <span class="font-semibold text-maroon">#${o.id}</span> has been placed successfully.</p>
+    <p class="text-sm text-stone-400 mt-1">A confirmation has been sent to ${A.esc(o.customer.email)}</p>
+  </div>
+
+  <!-- email-style receipt -->
+  <div class="card overflow-hidden">
+    <div class="bg-maroon text-cream px-6 py-5 flex items-center justify-between">
+      <div class="flex items-center gap-2"><span class="w-9 h-9 rounded-full border border-gold/50 flex items-center justify-center font-serif text-gold-light font-bold">A</span><span class="font-serif text-xl tracking-widest">ANANYA</span></div>
+      <div class="text-right text-xs text-cream/70"><p>Order #${o.id}</p><p id="odate"></p></div>
+    </div>
+    <div class="p-6">
+      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+        <div class="card p-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Status</p><span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span></div>
+        <div class="card p-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Payment</p><p class="text-sm font-medium text-maroon">${o.payment}</p></div>
+        <div class="card p-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Est. Delivery</p><p class="text-sm font-medium text-maroon">3–6 business days</p></div>
+      </div>
+
+      <table class="w-full mb-4"><thead><tr class="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-gold/15"><th class="pb-2">Item</th><th class="pb-2 text-center">Qty</th><th class="pb-2 text-right">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+
+      <div class="ml-auto max-w-xs space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-stone-500">Subtotal</span><span class="text-maroon">${A.money(o.subtotal)}</span></div>
+        <div class="flex justify-between"><span class="text-stone-500">Shipping</span><span class="${o.shipping_fee===0?'text-green-600':'text-maroon'}">${o.shipping_fee===0?'FREE':A.money(o.shipping_fee)}</span></div>
+        <div class="flex justify-between border-t border-gold/15 pt-2 font-semibold"><span class="text-maroon">Total Paid</span><span class="font-serif text-xl text-maroon">${A.money(o.total)}</span></div>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-gold/15 grid sm:grid-cols-2 gap-4 text-sm">
+        <div><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Shipping To</p><p class="text-maroon font-medium">${A.esc(o.customer.name)}</p><p class="text-stone-500">${A.esc(o.shipping.address)}, ${A.esc(o.shipping.city)}, ${A.esc(o.shipping.state)} - ${A.esc(o.shipping.pincode)}</p><p class="text-stone-500">${A.esc(o.customer.phone)}</p></div>
+        <div class="sm:text-right"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Need Help?</p><p class="text-stone-500">Track your order anytime from your account dashboard.</p></div>
+      </div>
+    </div>
+    <div class="bg-cream-dark/40 px-6 py-4 text-center text-xs text-stone-400">Thank you for shopping with Ananya — Where Tradition Meets Excellence.</div>
+  </div>
+
+  <div class="flex flex-wrap justify-center gap-3 mt-8">
+    <a href="account.html" class="btn-maroon">Track My Order</a>
+    <a href="shop.html" class="btn-outline">Continue Shopping</a>
+  </div>`;
+
+  try { document.getElementById('odate').textContent = A.fmtDate(o.placedAt); } catch(e){}
+};
+</script>
+</body>
+</html>

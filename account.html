@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Account · Ananya</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,600,700|poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/js/ananya.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div id="acct-root"></div>
+</main>
+
+<div id="site-footer"></div>
+
+<script>
+window.PAGE_INIT = function () {
+  const A = window.Ananya;
+  const u = A.requireAuth();
+  if (!u) return;
+  const root = document.getElementById('acct-root');
+  let tab = A.qs('tab') || 'overview';
+
+  const TIMELINE = ['pending','processing','shipped','delivered'];
+
+  function shell(content) {
+    const orders = A.orders.forUser(u.id);
+    const nav = [['overview','Overview','M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'],
+      ['orders','My Orders','M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+      ['profile','Profile','M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z']];
+    return `
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <div><h1 class="section-title">My Account</h1><p class="text-sm text-stone-500 mt-1">Welcome back, ${A.esc(u.name)}</p></div>
+      <a href="#" data-logout class="btn-outline py-2 px-4">Logout</a>
+    </div>
+    <div class="grid lg:grid-cols-[240px_1fr] gap-8 items-start">
+      <aside class="card p-3">
+        ${nav.map(([k,l,ic]) => `<a href="account.html?tab=${k}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${tab===k?'bg-maroon text-cream':'text-stone-600 hover:bg-cream-dark'}"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${ic}"/></svg>${l}${k==='orders'?`<span class="ml-auto badge ${tab===k?'bg-cream/20 text-cream':'bg-gold/15 text-gold-dark'}">${orders.length}</span>`:''}</a>`).join('')}
+      </aside>
+      <section>${content}</section>
+    </div>`;
+  }
+
+  function overview() {
+    const orders = A.orders.forUser(u.id);
+    const spent = orders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+    const active = orders.filter(o=>['pending','processing','shipped'].includes(o.status)).length;
+    const stat = (label,val,ic) => `<div class="card p-5"><div class="w-10 h-10 rounded-full bg-gold/10 text-gold-dark flex items-center justify-center mb-3"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${ic}"/></svg></div><p class="font-serif text-2xl font-bold text-maroon">${val}</p><p class="text-xs text-stone-500 mt-0.5">${label}</p></div>`;
+    const recent = orders.slice(0,3).map(orderRow).join('') || emptyOrders();
+    return `
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        ${stat('Total Orders', orders.length, 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2')}
+        ${stat('Active Orders', active, 'M9 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0z')}
+        ${stat('Total Spent', A.money(spent), 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1')}
+      </div>
+      <div class="flex items-center justify-between mb-3"><h3 class="font-serif text-xl text-maroon">Recent Orders</h3><a href="account.html?tab=orders" class="text-sm text-maroon hover:text-gold-dark">View all</a></div>
+      <div class="space-y-3">${recent}</div>`;
+  }
+
+  function ordersView() {
+    const orders = A.orders.forUser(u.id);
+    if (!orders.length) return emptyOrders();
+    return `<div class="space-y-4">${orders.map(orderCard).join('')}</div>`;
+  }
+
+  function orderRow(o) {
+    return `<a href="account.html?tab=orders" class="card p-4 flex items-center gap-4 hover:border-gold/40 transition">
+      <div class="w-12 h-12 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${o.items[0].image}" class="max-h-full max-w-full object-contain"></div>
+      <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-maroon">#${o.id}</p><p class="text-xs text-stone-400">${A.fmtDate(o.placedAt)} · ${o.items.length} item(s)</p></div>
+      <span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span>
+      <span class="font-serif font-bold text-maroon">${A.money(o.total)}</span>
+    </a>`;
+  }
+
+  function orderCard(o) {
+    const stepIdx = TIMELINE.indexOf(o.status);
+    const cancelled = o.status === 'cancelled';
+    const items = o.items.map(i => `<div class="flex items-center gap-3 py-2"><div class="w-11 h-11 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${i.image}" class="max-h-full max-w-full object-contain"></div><div class="flex-1 min-w-0"><p class="text-sm text-maroon line-clamp-1">${A.esc(i.name)}</p><p class="text-xs text-stone-400">${A.money(i.price)} × ${i.qty}</p></div><span class="text-sm font-medium text-maroon">${A.money(i.price*i.qty)}</span></div>`).join('');
+    const tl = cancelled
+      ? `<div class="flex items-center gap-2 text-sm text-red-500 mt-4"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>This order was cancelled</div>`
+      : `<div class="mt-5 flex items-center">${TIMELINE.map((s,i)=>`
+          <div class="flex flex-col items-center ${i===0?'':'flex-1'} ${i===0?'':'-ml-px'}">
+            ${i>0?`<div class="w-full h-0.5 ${i<=stepIdx?'bg-gold':'bg-gold/20'} mb-[-14px]"></div>`:''}
+          </div>`).join('')}</div>
+        <div class="flex justify-between mt-2">${TIMELINE.map((s,i)=>`
+          <div class="flex flex-col items-center text-center" style="width:25%">
+            <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${i<=stepIdx?'bg-gold text-white':'bg-gold/15 text-gold-dark'}">${i<stepIdx?'✓':i+1}</span>
+            <span class="text-[10px] mt-1 capitalize ${i<=stepIdx?'text-maroon font-medium':'text-stone-400'}">${s}</span>
+          </div>`).join('')}</div>`;
+    return `<div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gold/10">
+        <div><span class="font-semibold text-maroon">#${o.id}</span><span class="text-xs text-stone-400 ml-2">Placed ${A.fmtDate(o.placedAt)}</span></div>
+        <div class="flex items-center gap-3"><span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span><span class="font-serif font-bold text-maroon">${A.money(o.total)}</span></div>
+      </div>
+      <div class="divide-y divide-gold/5">${items}</div>
+      <div class="mt-1 pt-3 border-t border-gold/10 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span class="text-stone-500">Ship to: ${A.esc(o.shipping.city)}, ${A.esc(o.shipping.state)} · ${o.payment}</span>
+        <a href="order-confirmation.html?id=${o.id}" class="text-maroon hover:text-gold-dark font-medium">View receipt</a>
+      </div>
+      ${tl}
+    </div>`;
+  }
+
+  function emptyOrders() {
+    return `<div class="card text-center py-16"><div class="w-16 h-16 rounded-full bg-gold/10 mx-auto flex items-center justify-center text-gold-dark mb-3"><svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg></div><p class="font-serif text-xl text-maroon">No orders yet</p><a href="shop.html" class="btn-maroon mt-4">Start shopping</a></div>`;
+  }
+
+  function profileView() {
+    return `<div class="card p-6 max-w-xl">
+      <h3 class="font-serif text-xl text-maroon mb-5">Profile Details</h3>
+      <form id="profile-form" class="space-y-4">
+        <div><label class="field-label">Full Name</label><input name="name" value="${A.esc(u.name)}" class="field"></div>
+        <div><label class="field-label">Email</label><input name="email" value="${A.esc(u.email)}" class="field bg-cream-dark/40" readonly></div>
+        <div><label class="field-label">Phone</label><input name="phone" value="${A.esc(u.phone||'')}" placeholder="+91 ..." class="field"></div>
+        <div><label class="field-label">Default Address</label><textarea name="address" rows="3" class="field">${A.esc(u.address||'')}</textarea></div>
+        <button class="btn-maroon">Save Changes</button>
+      </form>
+    </div>`;
+  }
+
+  function render() {
+    const content = tab === 'orders' ? ordersView() : tab === 'profile' ? profileView() : overview();
+    root.innerHTML = shell(content);
+    A.mountLayout(); // re-wire header injected earlier stays; wire logout links inside
+    document.querySelectorAll('[data-logout]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); A.auth.logout(); location.href='index.html'; }));
+    const pf = document.getElementById('profile-form');
+    if (pf) pf.addEventListener('submit', e => { e.preventDefault(); A.auth.updateProfile({ name: pf.name.value.trim(), phone: pf.phone.value.trim(), address: pf.address.value.trim() }); A.toast('Profile updated'); });
+  }
+  render();
+};
+</script>
+</body>
+</html>

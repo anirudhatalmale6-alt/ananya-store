@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard · Ananya</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,600,700|poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/js/ananya.js"></script>
+</head>
+<body class="bg-cream-dark/30">
+
+<div id="admin-root" class="min-h-screen"></div>
+
+<!-- modal host -->
+<div id="modal-host"></div>
+
+<script>
+window.PAGE_INIT = function () {
+  const A = window.Ananya;
+  const u = A.requireAuth('admin');
+  if (!u) return;
+  const root = document.getElementById('admin-root');
+  const host = document.getElementById('modal-host');
+  let tab = A.qs('tab') || 'dashboard';
+
+  const NAV = [
+    ['dashboard','Dashboard','M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'],
+    ['products','Products','M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'],
+    ['categories','Categories','M7 7h.01M7 3h5a1.99 1.99 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A1.99 1.99 0 013 7V4a1 1 0 011-1z'],
+    ['orders','Orders','M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+    ['customers','Customers','M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87'],
+  ];
+
+  /* ---------------- shell ---------------- */
+  function shell(content, title, subtitle, action) {
+    const orders = A.orders.all();
+    const pendingCount = orders.filter(o => o.status === 'pending').length;
+    return `
+    <div class="flex">
+      <!-- sidebar -->
+      <aside class="hidden lg:flex flex-col w-64 shrink-0 bg-maroon-dark text-cream/80 min-h-screen sticky top-0">
+        <a href="index.html" class="flex items-center gap-2.5 px-6 h-20 border-b border-gold/15">
+          <span class="w-10 h-10 rounded-full border-2 border-gold flex items-center justify-center font-serif text-gold-light font-bold text-lg">A</span>
+          <span class="leading-none"><span class="block font-serif text-xl tracking-widest text-cream">ANANYA</span><span class="block text-[9px] tracking-[0.3em] text-gold-light/70 mt-1">ADMIN PANEL</span></span>
+        </a>
+        <nav class="flex-1 p-4 space-y-1">
+          ${NAV.map(([k,l,ic]) => `<a href="admin.html?tab=${k}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${tab===k?'bg-gold text-maroon-dark shadow':'hover:bg-white/5'}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${ic}"/></svg>${l}
+            ${k==='orders'&&pendingCount?`<span class="ml-auto text-[10px] font-bold ${tab===k?'bg-maroon-dark text-gold-light':'bg-gold text-maroon-dark'} rounded-full px-2 py-0.5">${pendingCount}</span>`:''}</a>`).join('')}
+        </nav>
+        <div class="p-4 border-t border-gold/15">
+          <div class="flex items-center gap-3 px-2 mb-3">
+            <span class="w-9 h-9 rounded-full bg-gold/20 flex items-center justify-center text-gold-light font-semibold">${A.esc(u.name[0])}</span>
+            <div class="min-w-0"><p class="text-sm text-cream truncate">${A.esc(u.name)}</p><p class="text-[11px] text-cream/50 truncate">${A.esc(u.email)}</p></div>
+          </div>
+          <a href="#" data-logout class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm hover:bg-white/5 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Logout</a>
+        </div>
+      </aside>
+
+      <!-- main -->
+      <div class="flex-1 min-w-0">
+        <!-- topbar -->
+        <div class="bg-cream border-b border-gold/20 sticky top-0 z-30">
+          <div class="px-4 sm:px-8 h-20 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <button id="mob-menu" class="lg:hidden text-maroon"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+              <div class="min-w-0"><h1 class="font-serif text-2xl text-maroon truncate">${title}</h1><p class="text-xs text-stone-500 truncate">${subtitle||''}</p></div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <a href="index.html" target="_blank" class="hidden sm:inline-flex btn-outline py-2 px-4 text-sm">View Store</a>
+              ${action||''}
+            </div>
+          </div>
+          <!-- mobile nav -->
+          <div id="mob-nav" class="lg:hidden hidden border-t border-gold/15 px-4 py-2 flex flex-wrap gap-2 bg-cream">
+            ${NAV.map(([k,l]) => `<a href="admin.html?tab=${k}" class="px-3 py-1.5 rounded-full text-xs font-medium ${tab===k?'bg-maroon text-cream':'bg-cream-dark text-maroon'}">${l}</a>`).join('')}
+          </div>
+        </div>
+        <div class="p-4 sm:p-8">${content}</div>
+      </div>
+    </div>`;
+  }
+
+  /* ---------------- dashboard ---------------- */
+  function dashboard() {
+    const cat = A.catalog.all();
+    const orders = A.orders.all();
+    const customers = A.auth.users().filter(x => x.role === 'customer');
+    const revenue = orders.filter(o => o.status !== 'cancelled').reduce((s,o) => s + o.total, 0);
+    const lowStock = cat.products.filter(p => p.stock <= 5).sort((a,b)=>a.stock-b.stock);
+
+    const stat = (label,val,ic,tint) => `
+      <div class="card p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl ${tint} flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${ic}"/></svg></div>
+        <div><p class="font-serif text-2xl font-bold text-maroon leading-none">${val}</p><p class="text-xs text-stone-500 mt-1.5">${label}</p></div>
+      </div>`;
+
+    const statusCounts = A.orders.statuses().map(s => ({ s, n: orders.filter(o=>o.status===s).length }));
+
+    const recent = orders.slice().sort((a,b)=>b.placedAt.localeCompare(a.placedAt)).slice(0,6).map(o => `
+      <tr class="border-b border-gold/8 hover:bg-cream-dark/20">
+        <td class="py-3 pr-3"><a href="admin.html?tab=orders&order=${o.id}" class="font-medium text-maroon hover:text-gold-dark">#${o.id}</a></td>
+        <td class="py-3 pr-3 text-stone-600">${A.esc(o.customer.name)}</td>
+        <td class="py-3 pr-3 text-stone-400 whitespace-nowrap hidden sm:table-cell">${A.fmtDate(o.placedAt)}</td>
+        <td class="py-3 pr-3"><span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span></td>
+        <td class="py-3 text-right font-semibold text-maroon whitespace-nowrap">${A.money(o.total)}</td>
+      </tr>`).join('') || `<tr><td colspan="5" class="py-8 text-center text-stone-400">No orders yet</td></tr>`;
+
+    const lowRows = lowStock.slice(0,6).map(p => `
+      <div class="flex items-center gap-3 py-2.5 border-b border-gold/8 last:border-0">
+        <div class="w-10 h-10 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${p.images[0]}" class="max-h-full max-w-full object-contain"></div>
+        <a href="admin.html?tab=products&edit=${p.id}" class="flex-1 min-w-0 text-sm text-maroon hover:text-gold-dark line-clamp-1">${A.esc(p.name)}</a>
+        <span class="badge ${p.stock<=0?'bg-red-100 text-red-600':'bg-amber-100 text-amber-700'}">${p.stock} left</span>
+      </div>`).join('') || `<p class="text-sm text-stone-400 py-6 text-center">All products well-stocked</p>`;
+
+    return `
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        ${stat('Total Products', cat.products.length, 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'bg-gold/15 text-gold-dark')}
+        ${stat('Total Orders', orders.length, 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 'bg-blue-100 text-blue-600')}
+        ${stat('Revenue', A.money(revenue), 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 1v8m0 0v1', 'bg-green-100 text-green-600')}
+        ${stat('Customers', customers.length, 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2a4 4 0 10-4-4 4 4 0 004 4z', 'bg-maroon/10 text-maroon')}
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        ${statusCounts.map(({s,n}) => `<a href="admin.html?tab=orders&status=${s}" class="card px-4 py-3 text-center hover:border-gold/40 transition"><p class="font-serif text-xl font-bold text-maroon">${n}</p><span class="badge ${A.STATUS_STYLE[s]} mt-1">${s}</span></a>`).join('')}
+      </div>
+
+      <div class="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-serif text-lg text-maroon">Recent Orders</h3><a href="admin.html?tab=orders" class="text-sm text-maroon hover:text-gold-dark">View all</a></div>
+          <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-gold/15"><th class="pb-2">Order</th><th class="pb-2">Customer</th><th class="pb-2 hidden sm:table-cell">Date</th><th class="pb-2">Status</th><th class="pb-2 text-right">Total</th></tr></thead><tbody>${recent}</tbody></table></div>
+        </div>
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-2"><h3 class="font-serif text-lg text-maroon">Low Stock Alert</h3><a href="admin.html?tab=products" class="text-sm text-maroon hover:text-gold-dark">Manage</a></div>
+          ${lowRows}
+        </div>
+      </div>`;
+  }
+
+  /* ---------------- products ---------------- */
+  function products() {
+    const cat = A.catalog.all();
+    const q = (A.qs('pq') || '').toLowerCase();
+    let list = cat.products;
+    if (q) list = list.filter(p => p.name.toLowerCase().includes(q));
+    const rows = list.map(p => {
+      const c = cat.categories.find(x => x.id === p.categoryId);
+      const onSale = p.salePrice != null && p.salePrice < p.price;
+      return `
+      <tr class="border-b border-gold/8 hover:bg-cream-dark/20">
+        <td class="py-3 pr-3"><div class="flex items-center gap-3 min-w-0"><div class="w-11 h-11 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${p.images[0]}" class="max-h-full max-w-full object-contain"></div><div class="min-w-0"><p class="text-sm font-medium text-maroon line-clamp-1">${A.esc(p.name)}</p><p class="text-[11px] text-stone-400">${p.images.length} image(s)${p.featured?' · ★ Featured':''}</p></div></div></td>
+        <td class="py-3 pr-3 text-sm text-stone-500 whitespace-nowrap hidden md:table-cell">${A.esc(c?c.name:'—')}</td>
+        <td class="py-3 pr-3 whitespace-nowrap"><span class="text-sm font-semibold text-maroon">${A.money(onSale?p.salePrice:p.price)}</span>${onSale?`<span class="text-[11px] text-stone-400 line-through ml-1">${A.money(p.price)}</span>`:''}</td>
+        <td class="py-3 pr-3"><span class="badge ${p.stock<=0?'bg-red-100 text-red-600':p.stock<=5?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700'}">${p.stock}</span></td>
+        <td class="py-3 text-right whitespace-nowrap">
+          <button data-edit-prod="${p.id}" class="text-maroon hover:text-gold-dark p-1.5" title="Edit"><svg class="w-4.5 h-4.5 w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+          <button data-del-prod="${p.id}" class="text-red-400 hover:text-red-600 p-1.5" title="Delete"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" class="py-10 text-center text-stone-400">No products found</td></tr>`;
+
+    return `
+      <div class="card p-5">
+        <form data-pq class="mb-4 relative max-w-sm">
+          <input name="pq" value="${A.esc(A.qs('pq')||'')}" placeholder="Search products..." class="field pl-10">
+          <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </form>
+        <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-gold/15"><th class="pb-2">Product</th><th class="pb-2 hidden md:table-cell">Category</th><th class="pb-2">Price</th><th class="pb-2">Stock</th><th class="pb-2 text-right">Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <p class="text-xs text-stone-400 mt-4">${list.length} product(s)</p>
+      </div>`;
+  }
+
+  /* ---------------- categories ---------------- */
+  function categories() {
+    const cat = A.catalog.all();
+    const cards = cat.categories.map(c => {
+      const count = cat.products.filter(p => p.categoryId === c.id).length;
+      return `
+      <div class="card overflow-hidden group">
+        <div class="h-32 bg-cream-dark/40 flex items-center justify-center p-4"><img src="${c.image}" class="max-h-full max-w-full object-contain"></div>
+        <div class="p-4">
+          <h3 class="font-serif text-maroon">${A.esc(c.name)}</h3>
+          <p class="text-xs text-stone-500 mt-0.5 line-clamp-1">${A.esc(c.description||'')}</p>
+          <div class="flex items-center justify-between mt-3">
+            <span class="badge bg-gold/15 text-gold-dark">${count} product(s)</span>
+            <div class="flex items-center gap-1">
+              <button data-edit-cat="${c.id}" class="text-maroon hover:text-gold-dark p-1.5"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+              <button data-del-cat="${c.id}" class="text-red-400 hover:text-red-600 p-1.5"><svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">${cards}</div>`;
+  }
+
+  /* ---------------- orders ---------------- */
+  function ordersView() {
+    const filterStatus = A.qs('status') || '';
+    let list = A.orders.all().slice().sort((a,b)=>b.placedAt.localeCompare(a.placedAt));
+    if (filterStatus) list = list.filter(o => o.status === filterStatus);
+
+    const chips = ['', ...A.orders.statuses()].map(s => `<a href="admin.html?tab=orders${s?'&status='+s:''}" class="px-3.5 py-1.5 rounded-full text-xs font-medium capitalize transition ${filterStatus===s?'bg-maroon text-cream':'bg-cream border border-gold/25 text-maroon hover:border-gold/50'}">${s||'All'}</a>`).join('');
+
+    const rows = list.map(o => `
+      <tr class="border-b border-gold/8 hover:bg-cream-dark/20">
+        <td class="py-3 pr-3"><p class="font-medium text-maroon">#${o.id}</p><p class="text-[11px] text-stone-400">${o.items.length} item(s)</p></td>
+        <td class="py-3 pr-3"><p class="text-sm text-stone-700">${A.esc(o.customer.name)}</p><p class="text-[11px] text-stone-400 hidden sm:block">${A.esc(o.customer.email)}</p></td>
+        <td class="py-3 pr-3 text-sm text-stone-400 whitespace-nowrap hidden md:table-cell">${A.fmtDate(o.placedAt)}</td>
+        <td class="py-3 pr-3 text-sm text-stone-500 hidden lg:table-cell">${A.esc(o.payment)}</td>
+        <td class="py-3 pr-3"><span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span></td>
+        <td class="py-3 pr-3 text-right font-semibold text-maroon whitespace-nowrap">${A.money(o.total)}</td>
+        <td class="py-3 text-right"><button data-view-order="${o.id}" class="btn-outline py-1.5 px-3 text-xs">Manage</button></td>
+      </tr>`).join('') || `<tr><td colspan="7" class="py-10 text-center text-stone-400">No orders in this view</td></tr>`;
+
+    return `
+      <div class="flex flex-wrap gap-2 mb-4">${chips}</div>
+      <div class="card p-5"><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-gold/15"><th class="pb-2">Order</th><th class="pb-2">Customer</th><th class="pb-2 hidden md:table-cell">Date</th><th class="pb-2 hidden lg:table-cell">Payment</th><th class="pb-2">Status</th><th class="pb-2 text-right">Total</th><th class="pb-2 text-right">Action</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
+  /* ---------------- customers ---------------- */
+  function customers() {
+    const users = A.auth.users().filter(x => x.role === 'customer');
+    const allOrders = A.orders.all();
+    const rows = users.map(c => {
+      const co = allOrders.filter(o => o.userId === c.id);
+      const spent = co.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+      return `
+      <tr class="border-b border-gold/8 hover:bg-cream-dark/20">
+        <td class="py-3 pr-3"><div class="flex items-center gap-3"><span class="w-9 h-9 rounded-full bg-gold/15 text-gold-dark flex items-center justify-center font-semibold shrink-0">${A.esc(c.name[0]||'?')}</span><div class="min-w-0"><p class="text-sm font-medium text-maroon line-clamp-1">${A.esc(c.name)}</p><p class="text-[11px] text-stone-400 line-clamp-1">${A.esc(c.email)}</p></div></div></td>
+        <td class="py-3 pr-3 text-sm text-stone-500 whitespace-nowrap hidden md:table-cell">${A.esc(c.phone||'—')}</td>
+        <td class="py-3 pr-3 text-center"><span class="badge bg-blue-100 text-blue-700">${co.length}</span></td>
+        <td class="py-3 pr-3 text-right font-semibold text-maroon whitespace-nowrap">${A.money(spent)}</td>
+        <td class="py-3 text-right"><button data-view-cust="${c.id}" class="btn-outline py-1.5 px-3 text-xs">View</button></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" class="py-10 text-center text-stone-400">No customers yet</td></tr>`;
+    return `<div class="card p-5"><div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wide text-stone-400 border-b border-gold/15"><th class="pb-2">Customer</th><th class="pb-2 hidden md:table-cell">Phone</th><th class="pb-2 text-center">Orders</th><th class="pb-2 text-right">Total Spent</th><th class="pb-2 text-right">Action</th></tr></thead><tbody>${rows}</tbody></table></div><p class="text-xs text-stone-400 mt-4">${users.length} customer(s)</p></div>`;
+  }
+
+  /* ---------------- modal ---------------- */
+  function openModal(html, wide) {
+    host.innerHTML = `
+    <div class="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-4 sm:p-8">
+      <div data-overlay class="fixed inset-0 bg-maroon-dark/40 backdrop-blur-sm"></div>
+      <div class="relative card p-6 w-full ${wide?'max-w-3xl':'max-w-lg'} my-4 animate-[toastIn_.2s_ease]">${html}</div>
+    </div>`;
+    host.querySelector('[data-overlay]').addEventListener('click', closeModal);
+  }
+  function closeModal() { host.innerHTML = ''; }
+
+  // read a file input to a base64 data URL
+  function fileToDataURL(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  /* ---- product modal ---- */
+  function productModal(id) {
+    const cat = A.catalog.all();
+    const p = id ? cat.products.find(x => x.id === id) : null;
+    const isNew = !p;
+    const data = p || { id: '', name: '', categoryId: cat.categories[0]?.id || '', price: '', salePrice: '', stock: 0, images: [], description: '', featured: false, rating: 4.5 };
+    openModal(`
+      <div class="flex items-center justify-between mb-5"><h3 class="font-serif text-2xl text-maroon">${isNew?'Add Product':'Edit Product'}</h3><button data-close class="text-stone-400 hover:text-maroon text-2xl leading-none">&times;</button></div>
+      <form id="prod-form" class="space-y-4">
+        <div><label class="field-label">Product Name *</label><input name="name" required value="${A.esc(data.name)}" class="field"></div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="field-label">Category *</label><select name="categoryId" class="field">${cat.categories.map(c=>`<option value="${c.id}" ${c.id===data.categoryId?'selected':''}>${A.esc(c.name)}</option>`).join('')}</select></div>
+          <div><label class="field-label">Stock *</label><input name="stock" type="number" min="0" required value="${data.stock}" class="field"></div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="field-label">Price (₹) *</label><input name="price" type="number" min="0" step="1" required value="${data.price}" class="field"></div>
+          <div><label class="field-label">Sale Price (₹) <span class="text-stone-400 font-normal">— optional</span></label><input name="salePrice" type="number" min="0" step="1" value="${data.salePrice!=null?data.salePrice:''}" placeholder="Leave blank if none" class="field"></div>
+        </div>
+        <div><label class="field-label">Description</label><textarea name="description" rows="3" class="field">${A.esc(data.description||'')}</textarea></div>
+        <div>
+          <label class="field-label">Product Images</label>
+          <div id="img-strip" class="flex flex-wrap gap-2 mb-2"></div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="btn-outline py-2 px-4 text-sm cursor-pointer">Upload Image<input id="img-file" type="file" accept="image/*" multiple class="hidden"></label>
+            <input id="img-url" placeholder="…or paste image URL" class="field flex-1 min-w-[180px]"><button type="button" id="img-add-url" class="btn-gold py-2 px-4 text-sm shrink-0">Add</button>
+          </div>
+          <p class="text-[11px] text-stone-400 mt-1">First image is the main thumbnail. Click a thumbnail to remove it.</p>
+        </div>
+        <label class="flex items-center gap-2.5 text-sm text-stone-600"><input type="checkbox" name="featured" ${data.featured?'checked':''} class="accent-maroon w-4 h-4"> Show on homepage (Featured)</label>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn-maroon flex-1 py-3">${isNew?'Create Product':'Save Changes'}</button>
+          <button type="button" data-close class="btn-outline px-6">Cancel</button>
+        </div>
+      </form>`, true);
+
+    let images = data.images.slice();
+    const strip = host.querySelector('#img-strip');
+    function drawStrip() {
+      strip.innerHTML = images.length ? images.map((src,i) => `<button type="button" data-rm="${i}" class="relative w-16 h-16 rounded-lg bg-cream-dark/40 border ${i===0?'border-gold':'border-gold/20'} flex items-center justify-center p-1 group"><img src="${src}" class="max-h-full max-w-full object-contain"><span class="absolute inset-0 bg-red-600/0 group-hover:bg-red-600/70 rounded-lg flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition text-xs">Remove</span>${i===0?'<span class="absolute -top-1.5 -left-1.5 bg-gold text-white text-[8px] px-1 rounded">MAIN</span>':''}</button>`).join('') : '<p class="text-xs text-stone-400">No images yet — upload or add a URL.</p>';
+      strip.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { images.splice(+b.getAttribute('data-rm'),1); drawStrip(); }));
+    }
+    drawStrip();
+    host.querySelector('#img-file').addEventListener('change', async e => {
+      for (const f of e.target.files) { try { images.push(await fileToDataURL(f)); } catch(_){} }
+      drawStrip();
+    });
+    host.querySelector('#img-add-url').addEventListener('click', () => {
+      const inp = host.querySelector('#img-url'); const v = inp.value.trim();
+      if (v) { images.push(v); inp.value=''; drawStrip(); }
+    });
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+    host.querySelector('#prod-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const f = e.target;
+      const price = parseInt(f.price.value,10) || 0;
+      let sale = f.salePrice.value.trim() === '' ? null : parseInt(f.salePrice.value,10);
+      if (sale != null && (isNaN(sale) || sale <= 0 || sale >= price)) { A.toast('Sale price must be lower than price', 'error'); return; }
+      if (!images.length) images = ['img/cat-mixer.png'];
+      const prod = {
+        id: data.id || A.catalog.newId('p'),
+        name: f.name.value.trim(),
+        slug: A.slugify(f.name.value.trim()),
+        categoryId: f.categoryId.value,
+        price, salePrice: sale,
+        stock: Math.max(0, parseInt(f.stock.value,10) || 0),
+        images,
+        description: f.description.value.trim(),
+        featured: f.featured.checked,
+        rating: data.rating || 4.5,
+      };
+      A.catalog.upsertProduct(prod);
+      closeModal();
+      A.toast(isNew ? 'Product created' : 'Product updated');
+      render();
+    });
+  }
+
+  /* ---- category modal ---- */
+  function categoryModal(id) {
+    const cat = A.catalog.all();
+    const c = id ? cat.categories.find(x => x.id === id) : null;
+    const isNew = !c;
+    const data = c || { id:'', name:'', slug:'', image:'', description:'' };
+    openModal(`
+      <div class="flex items-center justify-between mb-5"><h3 class="font-serif text-2xl text-maroon">${isNew?'Add Category':'Edit Category'}</h3><button data-close class="text-stone-400 hover:text-maroon text-2xl leading-none">&times;</button></div>
+      <form id="cat-form" class="space-y-4">
+        <div><label class="field-label">Category Name *</label><input name="name" required value="${A.esc(data.name)}" class="field"></div>
+        <div><label class="field-label">Description</label><input name="description" value="${A.esc(data.description||'')}" class="field"></div>
+        <div>
+          <label class="field-label">Category Image</label>
+          <div class="flex items-center gap-4">
+            <div id="cat-preview" class="w-20 h-20 rounded-xl bg-cream-dark/40 flex items-center justify-center p-2 shrink-0 border border-gold/20">${data.image?`<img src="${data.image}" class="max-h-full max-w-full object-contain">`:'<span class="text-[10px] text-stone-400 text-center">No image</span>'}</div>
+            <div class="flex-1 space-y-2">
+              <label class="btn-outline py-2 px-4 text-sm cursor-pointer inline-block">Upload Image<input id="cat-file" type="file" accept="image/*" class="hidden"></label>
+              <input id="cat-url" value="${A.esc(data.image||'')}" placeholder="…or paste image URL" class="field">
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn-maroon flex-1 py-3">${isNew?'Create Category':'Save Changes'}</button>
+          <button type="button" data-close class="btn-outline px-6">Cancel</button>
+        </div>
+      </form>`);
+    let image = data.image || '';
+    const preview = host.querySelector('#cat-preview');
+    const drawPrev = () => { preview.innerHTML = image ? `<img src="${image}" class="max-h-full max-w-full object-contain">` : '<span class="text-[10px] text-stone-400 text-center">No image</span>'; };
+    host.querySelector('#cat-file').addEventListener('change', async e => { if (e.target.files[0]) { image = await fileToDataURL(e.target.files[0]); host.querySelector('#cat-url').value=''; drawPrev(); } });
+    host.querySelector('#cat-url').addEventListener('input', e => { image = e.target.value.trim(); drawPrev(); });
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+    host.querySelector('#cat-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const f = e.target;
+      const name = f.name.value.trim();
+      const category = {
+        id: data.id || A.catalog.newId('c'),
+        name, slug: A.slugify(name),
+        image: image || 'img/cat-mixer.png',
+        description: f.description.value.trim(),
+      };
+      A.catalog.upsertCategory(category);
+      closeModal();
+      A.toast(isNew ? 'Category created' : 'Category updated');
+      render();
+    });
+  }
+
+  /* ---- order manage modal ---- */
+  function orderModal(id) {
+    const o = A.orders.byId(id);
+    if (!o) return;
+    const items = o.items.map(i => `<div class="flex items-center gap-3 py-2 border-b border-gold/8 last:border-0"><div class="w-11 h-11 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1 shrink-0"><img src="${i.image}" class="max-h-full max-w-full object-contain"></div><div class="flex-1 min-w-0"><p class="text-sm text-maroon line-clamp-1">${A.esc(i.name)}</p><p class="text-xs text-stone-400">${A.money(i.price)} × ${i.qty}</p></div><span class="text-sm font-medium text-maroon">${A.money(i.price*i.qty)}</span></div>`).join('');
+    openModal(`
+      <div class="flex items-center justify-between mb-4"><div><h3 class="font-serif text-2xl text-maroon">Order #${o.id}</h3><p class="text-xs text-stone-400">Placed ${A.fmtDate(o.placedAt)} · ${o.payment}</p></div><button data-close class="text-stone-400 hover:text-maroon text-2xl leading-none">&times;</button></div>
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div class="card p-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Customer</p><p class="text-sm font-medium text-maroon">${A.esc(o.customer.name)}</p><p class="text-xs text-stone-500">${A.esc(o.customer.email)}</p><p class="text-xs text-stone-500">${A.esc(o.customer.phone)}</p></div>
+        <div class="card p-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-1">Shipping Address</p><p class="text-xs text-stone-500">${A.esc(o.shipping.address)}, ${A.esc(o.shipping.city)}, ${A.esc(o.shipping.state)} - ${A.esc(o.shipping.pincode)}</p></div>
+      </div>
+      <div class="card p-4 mb-4"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-2">Items</p>${items}
+        <div class="flex justify-between mt-3 pt-3 border-t border-gold/15 text-sm"><span class="text-stone-500">Subtotal</span><span class="text-maroon">${A.money(o.subtotal)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-500">Shipping</span><span class="text-maroon">${o.shipping_fee===0?'FREE':A.money(o.shipping_fee)}</span></div>
+        <div class="flex justify-between mt-1 pt-2 border-t border-gold/15 font-semibold"><span class="text-maroon">Total</span><span class="font-serif text-lg text-maroon">${A.money(o.total)}</span></div>
+      </div>
+      <label class="field-label">Update Order Status</label>
+      <div class="flex flex-wrap gap-2 mb-4">
+        ${A.orders.statuses().map(s => `<button data-set-status="${s}" class="px-3.5 py-2 rounded-full text-xs font-medium capitalize transition ${o.status===s?'bg-maroon text-cream ring-2 ring-gold':'bg-cream border border-gold/25 text-maroon hover:border-gold/50'}">${s}</button>`).join('')}
+      </div>
+      <div class="flex gap-3"><a href="order-confirmation.html?id=${o.id}" target="_blank" class="btn-outline flex-1 py-2.5 text-center text-sm">View Receipt</a><button data-close class="btn-maroon px-6">Done</button></div>`, true);
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+    host.querySelectorAll('[data-set-status]').forEach(b => b.addEventListener('click', () => {
+      A.orders.updateStatus(o.id, b.getAttribute('data-set-status'));
+      A.toast('Order status updated to ' + b.getAttribute('data-set-status'));
+      closeModal(); render();
+    }));
+  }
+
+  /* ---- customer detail modal ---- */
+  function customerModal(id) {
+    const c = A.auth.users().find(x => x.id === id);
+    if (!c) return;
+    const co = A.orders.forUser(c.id);
+    const spent = co.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+o.total,0);
+    const orderList = co.map(o => `<div class="flex items-center gap-3 py-2.5 border-b border-gold/8 last:border-0"><div class="min-w-0 flex-1"><p class="text-sm font-medium text-maroon">#${o.id}</p><p class="text-[11px] text-stone-400">${A.fmtDate(o.placedAt)} · ${o.items.length} item(s)</p></div><span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span><span class="font-serif font-semibold text-maroon w-20 text-right">${A.money(o.total)}</span><button data-open-order="${o.id}" class="text-maroon hover:text-gold-dark text-xs shrink-0">Manage</button></div>`).join('') || '<p class="text-sm text-stone-400 py-6 text-center">No orders placed yet</p>';
+    openModal(`
+      <div class="flex items-center justify-between mb-4"><h3 class="font-serif text-2xl text-maroon">Customer Profile</h3><button data-close class="text-stone-400 hover:text-maroon text-2xl leading-none">&times;</button></div>
+      <div class="flex items-center gap-4 mb-5">
+        <span class="w-14 h-14 rounded-full bg-gold/15 text-gold-dark flex items-center justify-center font-serif text-2xl font-bold shrink-0">${A.esc(c.name[0]||'?')}</span>
+        <div class="min-w-0"><p class="font-serif text-xl text-maroon">${A.esc(c.name)}</p><p class="text-sm text-stone-500">${A.esc(c.email)}</p><p class="text-sm text-stone-500">${A.esc(c.phone||'No phone')}</p></div>
+      </div>
+      ${c.address?`<div class="card p-3 mb-4 text-sm text-stone-600"><span class="text-[11px] uppercase tracking-wide text-stone-400">Address: </span>${A.esc(c.address)}</div>`:''}
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="card p-4 text-center"><p class="font-serif text-2xl font-bold text-maroon">${co.length}</p><p class="text-xs text-stone-500">Total Orders</p></div>
+        <div class="card p-4 text-center"><p class="font-serif text-2xl font-bold text-maroon">${A.money(spent)}</p><p class="text-xs text-stone-500">Total Spent</p></div>
+      </div>
+      <p class="field-label">Order History</p>
+      <div class="card p-4 max-h-64 overflow-y-auto no-scrollbar">${orderList}</div>
+      <div class="flex justify-end mt-4"><button data-close class="btn-maroon px-6">Close</button></div>`, true);
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+    host.querySelectorAll('[data-open-order]').forEach(b => b.addEventListener('click', () => orderModal(b.getAttribute('data-open-order'))));
+  }
+
+  /* ---------------- render + wiring ---------------- */
+  function render() {
+    let content, title, subtitle, action = '';
+    if (tab === 'products') {
+      content = products(); title = 'Products'; subtitle = 'Manage your catalog';
+      action = `<button id="add-prod" class="btn-maroon py-2.5 px-4 text-sm inline-flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Add Product</button>`;
+    } else if (tab === 'categories') {
+      content = categories(); title = 'Categories'; subtitle = 'Organise your storefront';
+      action = `<button id="add-cat" class="btn-maroon py-2.5 px-4 text-sm inline-flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Add Category</button>`;
+    } else if (tab === 'orders') {
+      content = ordersView(); title = 'Orders'; subtitle = 'View and fulfil customer orders';
+    } else if (tab === 'customers') {
+      content = customers(); title = 'Customers'; subtitle = 'Your registered shoppers';
+    } else {
+      content = dashboard(); title = 'Dashboard'; subtitle = 'Welcome back, ' + u.name.split(' ')[0];
+    }
+    root.innerHTML = shell(content, title, subtitle, action);
+
+    // global wiring
+    document.querySelectorAll('[data-logout]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); A.auth.logout(); location.href='index.html'; }));
+    const mm = document.getElementById('mob-menu'); if (mm) mm.addEventListener('click', () => document.getElementById('mob-nav').classList.toggle('hidden'));
+
+    // per-tab wiring
+    const addP = document.getElementById('add-prod'); if (addP) addP.addEventListener('click', () => productModal(null));
+    const addC = document.getElementById('add-cat'); if (addC) addC.addEventListener('click', () => categoryModal(null));
+
+    document.querySelectorAll('[data-edit-prod]').forEach(b => b.addEventListener('click', () => productModal(b.getAttribute('data-edit-prod'))));
+    document.querySelectorAll('[data-del-prod]').forEach(b => b.addEventListener('click', () => {
+      const id = b.getAttribute('data-del-prod'); const p = A.catalog.productById(id);
+      if (confirm('Delete "' + (p?p.name:'this product') + '"? This cannot be undone.')) { A.catalog.deleteProduct(id); A.toast('Product deleted'); render(); }
+    }));
+    document.querySelectorAll('[data-edit-cat]').forEach(b => b.addEventListener('click', () => categoryModal(b.getAttribute('data-edit-cat'))));
+    document.querySelectorAll('[data-del-cat]').forEach(b => b.addEventListener('click', () => {
+      const id = b.getAttribute('data-del-cat');
+      const inCat = A.catalog.byCategory(id).length;
+      if (inCat > 0) { A.toast('Move or delete its ' + inCat + ' product(s) first', 'error'); return; }
+      if (confirm('Delete this category?')) { A.catalog.deleteCategory(id); A.toast('Category deleted'); render(); }
+    }));
+    document.querySelectorAll('[data-view-order]').forEach(b => b.addEventListener('click', () => orderModal(b.getAttribute('data-view-order'))));
+    document.querySelectorAll('[data-view-cust]').forEach(b => b.addEventListener('click', () => customerModal(b.getAttribute('data-view-cust'))));
+
+    // product search (client-side, updates URL param)
+    document.querySelectorAll('form[data-pq]').forEach(f => f.addEventListener('submit', e => {
+      e.preventDefault(); const v = f.querySelector('[name=pq]').value.trim();
+      history.replaceState(null,'', 'admin.html?tab=products' + (v?'&pq='+encodeURIComponent(v):''));
+      // re-render products list only
+      tab = 'products'; render();
+    }));
+
+    // deep-link: ?order= / ?edit= open modal on load
+    const deepOrder = A.qs('order'); if (deepOrder && tab==='orders') { orderModal(deepOrder); }
+    const deepEdit = A.qs('edit'); if (deepEdit && tab==='products') { productModal(deepEdit); }
+  }
+
+  render();
+};
+</script>
+</body>
+</html>

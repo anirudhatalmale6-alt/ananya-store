@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout · Ananya</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,600,700|poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/js/ananya.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <nav class="text-xs text-stone-400 mb-2"><a href="cart.html" class="hover:text-gold-dark">Cart</a> / <span class="text-maroon">Checkout</span></nav>
+  <h1 class="section-title mb-6">Checkout</h1>
+  <div id="checkout-root"></div>
+</main>
+
+<div id="site-footer"></div>
+
+<script>
+window.PAGE_INIT = function () {
+  const A = window.Ananya;
+  const root = document.getElementById('checkout-root');
+  const items = A.cart.detailed();
+  if (!items.length) { root.innerHTML = '<div class="card text-center py-16"><p class="font-serif text-xl text-maroon">Your cart is empty</p><a href="shop.html" class="btn-maroon mt-4">Go shopping</a></div>'; return; }
+
+  const u = A.auth.current();
+  const nm = u ? u.name : '';
+  const em = u ? u.email : '';
+  const ph = u ? (u.phone||'') : '';
+  const subtotal = A.cart.subtotal(), ship = A.cart.shippingFee(), total = A.cart.total();
+
+  const summaryRows = items.map(i => `
+    <div class="flex gap-3 py-3 border-b border-gold/10 last:border-0">
+      <div class="w-14 h-14 rounded-lg bg-cream-dark/40 flex items-center justify-center p-1.5 shrink-0 relative"><img src="${i.image}" class="max-h-full max-w-full object-contain"><span class="absolute -top-2 -right-2 bg-maroon text-cream text-[10px] w-5 h-5 rounded-full flex items-center justify-center">${i.qty}</span></div>
+      <div class="flex-1 min-w-0"><p class="text-sm text-maroon line-clamp-2">${A.esc(i.name)}</p><p class="text-xs text-stone-400">${A.money(i.price)} × ${i.qty}</p></div>
+      <span class="text-sm font-semibold text-maroon">${A.money(i.line)}</span>
+    </div>`).join('');
+
+  root.innerHTML = `
+  <form id="checkout-form" class="grid lg:grid-cols-[1fr_380px] gap-8 items-start">
+    <div class="space-y-6">
+      ${u ? '' : `<div class="card p-4 flex items-center justify-between bg-gold/5"><p class="text-sm text-stone-600">Already have an account?</p><a href="login.html?next=checkout.html" class="btn-outline py-2 px-4">Login</a></div>`}
+      <div class="card p-6">
+        <h3 class="font-serif text-xl text-maroon mb-4">Shipping Details</h3>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="field-label">Full Name *</label><input name="name" required value="${A.esc(nm)}" class="field"></div>
+          <div><label class="field-label">Phone *</label><input name="phone" required value="${A.esc(ph)}" placeholder="+91 ..." class="field"></div>
+          <div class="sm:col-span-2"><label class="field-label">Email *</label><input name="email" type="email" required value="${A.esc(em)}" class="field"></div>
+          <div class="sm:col-span-2"><label class="field-label">Address *</label><input name="address" required placeholder="House no, street, area" class="field"></div>
+          <div><label class="field-label">City *</label><input name="city" required class="field"></div>
+          <div><label class="field-label">State *</label><input name="state" required class="field"></div>
+          <div><label class="field-label">PIN Code *</label><input name="pincode" required pattern="[0-9]{6}" placeholder="600001" class="field"></div>
+          <div><label class="field-label">Landmark</label><input name="landmark" class="field"></div>
+        </div>
+      </div>
+      <div class="card p-6">
+        <h3 class="font-serif text-xl text-maroon mb-4">Payment Method</h3>
+        <div class="space-y-3">
+          <label class="flex items-center gap-3 p-3 rounded-xl border border-gold/30 cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-gold/5 transition"><input type="radio" name="payment" value="Cash on Delivery" checked class="accent-maroon"><span class="text-sm font-medium text-maroon">Cash on Delivery</span><span class="ml-auto text-xs text-stone-400">Pay when you receive</span></label>
+          <label class="flex items-center gap-3 p-3 rounded-xl border border-gold/30 cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-gold/5 transition"><input type="radio" name="payment" value="UPI" class="accent-maroon"><span class="text-sm font-medium text-maroon">UPI / Cards / Netbanking</span><span class="ml-auto text-xs text-stone-400">Gateway on live store</span></label>
+        </div>
+        <p class="text-xs text-stone-400 mt-3">This is a demo — no real payment is processed. Orders are recorded so you can track them in your dashboard.</p>
+      </div>
+    </div>
+
+    <div class="card p-6 lg:sticky lg:top-28">
+      <h3 class="font-serif text-xl text-maroon mb-2">Order Summary</h3>
+      <div class="max-h-64 overflow-auto no-scrollbar">${summaryRows}</div>
+      <div class="space-y-2.5 text-sm mt-4 pt-4 border-t border-gold/15">
+        <div class="flex justify-between"><span class="text-stone-500">Subtotal</span><span class="font-medium text-maroon">${A.money(subtotal)}</span></div>
+        <div class="flex justify-between"><span class="text-stone-500">Shipping</span><span class="font-medium ${ship===0?'text-green-600':'text-maroon'}">${ship===0?'FREE':A.money(ship)}</span></div>
+        <div class="border-t border-gold/15 pt-2.5 flex justify-between items-center"><span class="font-semibold text-maroon">Total</span><span class="font-serif text-2xl font-bold text-maroon">${A.money(total)}</span></div>
+      </div>
+      <button type="submit" class="btn-maroon w-full mt-5 py-3.5">PLACE ORDER</button>
+      <p class="text-[11px] text-stone-400 text-center mt-3 flex items-center justify-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>Secure &amp; encrypted checkout</p>
+    </div>
+  </form>`;
+
+  document.getElementById('checkout-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target;
+    const g = n => f.querySelector(`[name="${n}"]`).value.trim();
+    const seq = Math.floor(1000 + Math.abs((Date.parse(document.lastModified) || items.length*7919)) % 9000);
+    const id = 'ANZ-' + (parseInt(localStorage.getItem('ananya_ordno')||'2050',10)+1);
+    localStorage.setItem('ananya_ordno', id.replace('ANZ-',''));
+    const order = {
+      id,
+      userId: u ? u.id : 'guest',
+      customer: { name: g('name'), email: g('email'), phone: g('phone') },
+      shipping: { address: g('address'), city: g('city'), state: g('state'), pincode: g('pincode'), landmark: g('landmark') },
+      items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image })),
+      subtotal, shipping_fee: ship, total,
+      payment: f.querySelector('[name="payment"]:checked').value,
+      status: 'pending',
+      placedAt: new Date(document.lastModified).toISOString ? isoNow() : isoNow(),
+    };
+    // decrement stock
+    const cat = A.catalog.all();
+    order.items.forEach(it => { const p = cat.products.find(x=>x.id===it.id); if (p) p.stock = Math.max(0, p.stock - it.qty); });
+    A.catalog.save(cat);
+    A.orders.create(order);
+    A.cart.clear();
+    location.href = 'order-confirmation.html?id=' + encodeURIComponent(order.id);
+  });
+
+  function isoNow() { try { return new Date().toISOString(); } catch(e){ return '2026-07-08T00:00:00Z'; } }
+};
+</script>
+</body>
+</html>

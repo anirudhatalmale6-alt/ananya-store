@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · Ananya</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=playfair-display:400,500,600,700|poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/js/ananya.js"></script>
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="max-w-md mx-auto px-4 py-12">
+  <div class="text-center mb-6">
+    <span class="inline-flex items-center justify-center w-16 h-16 rounded-full border-2 border-gold bg-white mb-3"><span class="font-serif text-2xl font-bold text-gold-dark">A</span></span>
+    <h1 class="section-title" id="title">Welcome Back</h1>
+    <p class="text-sm text-stone-500 mt-1" id="subtitle">Login to your Ananya account</p>
+  </div>
+
+  <div class="card p-7">
+    <div class="flex bg-cream-dark/50 rounded-full p-1 mb-6 text-sm font-semibold">
+      <button id="tab-login" class="flex-1 py-2 rounded-full bg-maroon text-cream transition">Login</button>
+      <button id="tab-reg" class="flex-1 py-2 rounded-full text-maroon transition">Register</button>
+    </div>
+
+    <form id="login-form" class="space-y-4">
+      <div><label class="field-label">Email</label><input name="email" type="email" required class="field" value="customer@ananya.com"></div>
+      <div><label class="field-label">Password</label><input name="password" type="password" required class="field" value="customer123"></div>
+      <button class="btn-maroon w-full py-3">LOGIN</button>
+    </form>
+
+    <form id="reg-form" class="space-y-4 hidden">
+      <div><label class="field-label">Full Name</label><input name="name" required class="field"></div>
+      <div><label class="field-label">Email</label><input name="email" type="email" required class="field"></div>
+      <div><label class="field-label">Password</label><input name="password" type="password" required minlength="4" class="field"></div>
+      <button class="btn-maroon w-full py-3">CREATE ACCOUNT</button>
+    </form>
+
+    <div class="mt-5 rounded-xl bg-gold/5 border border-gold/20 p-3 text-xs text-stone-500">
+      <p class="font-semibold text-maroon mb-1">Demo accounts</p>
+      <p>Customer — customer@ananya.com / customer123</p>
+      <p>Admin — admin@ananya.com / admin123</p>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script>
+window.PAGE_INIT = function () {
+  const A = window.Ananya;
+  const next = A.qs('next') || '';
+  const go = (u) => { location.href = next || (u.role === 'admin' ? 'admin.html' : 'account.html'); };
+
+  const loginForm = document.getElementById('login-form');
+  const regForm = document.getElementById('reg-form');
+  const tabLogin = document.getElementById('tab-login');
+  const tabReg = document.getElementById('tab-reg');
+
+  function show(which) {
+    const login = which === 'login';
+    loginForm.classList.toggle('hidden', !login);
+    regForm.classList.toggle('hidden', login);
+    tabLogin.className = 'flex-1 py-2 rounded-full transition ' + (login ? 'bg-maroon text-cream' : 'text-maroon');
+    tabReg.className = 'flex-1 py-2 rounded-full transition ' + (!login ? 'bg-maroon text-cream' : 'text-maroon');
+    document.getElementById('title').textContent = login ? 'Welcome Back' : 'Create Account';
+    document.getElementById('subtitle').textContent = login ? 'Login to your Ananya account' : 'Join the Ananya family';
+  }
+  tabLogin.addEventListener('click', () => show('login'));
+  tabReg.addEventListener('click', () => show('register'));
+
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const r = A.auth.login(loginForm.email.value, loginForm.password.value);
+    if (!r.ok) return A.toast(r.error, 'error');
+    A.toast('Welcome back, ' + r.user.name.split(' ')[0] + '!');
+    setTimeout(() => go(r.user), 500);
+  });
+  regForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const r = A.auth.register({ name: regForm.name.value.trim(), email: regForm.email.value.trim(), password: regForm.password.value });
+    if (!r.ok) return A.toast(r.error, 'error');
+    A.toast('Account created!');
+    setTimeout(() => go(r.user), 500);
+  });
+};
+</script>
+</body>
+</html>
