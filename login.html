@@ -14,7 +14,7 @@
 
 <main class="max-w-md mx-auto px-4 py-12">
   <div class="text-center mb-6">
-    <span class="inline-flex items-center justify-center w-16 h-16 rounded-full border-2 border-gold bg-white mb-3"><span class="font-serif text-2xl font-bold text-gold-dark">A</span></span>
+    <span id="login-logo" class="inline-flex items-center justify-center w-16 h-16 rounded-full border-2 border-gold bg-white mb-3"><span class="font-serif text-2xl font-bold text-gold-dark">A</span></span>
     <h1 class="section-title" id="title">Welcome Back</h1>
     <p class="text-sm text-stone-500 mt-1" id="subtitle">Login to your Ananya account</p>
   </div>
@@ -51,8 +51,12 @@
 <script>
 window.PAGE_INIT = function () {
   const A = window.Ananya;
+  // swap in the uploaded brand logo if one has been set
+  if (A.brand.logo()) { const el = document.getElementById('login-logo'); if (el) { el.className = 'inline-flex items-center justify-center mb-3'; el.innerHTML = `<img src="${A.brand.logo()}" alt="Ananya" style="height:64px;width:auto;max-width:220px;object-fit:contain">`; } }
   const next = A.qs('next') || '';
-  const go = (u) => { location.href = next || (u.role === 'admin' ? 'admin.html' : 'account.html'); };
+  // Administrators always land on the Admin Dashboard, regardless of any "next" target.
+  // Other roles follow their intended destination, then their account dashboard.
+  const go = (u) => { location.href = (u.role === 'admin') ? 'admin.html' : (next || 'account.html'); };
 
   const loginForm = document.getElementById('login-form');
   const regForm = document.getElementById('reg-form');

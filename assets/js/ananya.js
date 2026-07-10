@@ -12,6 +12,9 @@
     users: 'ananya_users_v1',
     session: 'ananya_session_v1',
     seq: 'ananya_seq_v1',
+    outbox: 'ananya_outbox_v1',
+    logo: 'ananya_logo_v1',
+    emailcfg: 'ananya_emailcfg_v1',
   };
 
   const read = (k, fallback) => {
@@ -205,8 +208,18 @@
     forUser(uid) { return this.all().filter(o => o.userId === uid).sort((a, b) => b.placedAt.localeCompare(a.placedAt)); },
     byId(id) { return this.all().find(o => o.id === id); },
     create(order) { const all = this.all(); all.push(order); this.save(all); return order; },
-    updateStatus(id, status) {
-      const all = this.all(); const o = all.find(x => x.id === id); if (o) { o.status = status; this.save(all); }
+    updateStatus(id, status, note) {
+      const all = this.all(); const o = all.find(x => x.id === id);
+      if (o) {
+        const prev = o.status;
+        o.status = status;
+        o.history = o.history || [];
+        o.history.push({ from: prev, to: status, note: note || '', at: nowISO() });
+        o.updatedAt = nowISO();
+        this.save(all);
+        return { order: o, prev };
+      }
+      return null;
     },
     statuses() { return STATUS.slice(); },
   };
@@ -225,6 +238,132 @@
     try { const d = new Date(iso); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
     catch (e) { return iso; }
   }
+  function fmtDateTime(iso) {
+    try { return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return iso; }
+  }
+  function nowISO() { try { return new Date().toISOString(); } catch (e) { return '2026-07-10T00:00:00Z'; } }
+  const titleCase = s => String(s || '').replace(/\b\w/g, c => c.toUpperCase());
+
+  /* ---------- brand / logo ---------- */
+  const brand = {
+    logo() { return read(LS.logo, null); },
+    setLogo(url) { if (url) write(LS.logo, url); else localStorage.removeItem(LS.logo); },
+  };
+  // Returns an <img> of the uploaded logo, or the supplied fallback markup (monogram + wordmark).
+  function brandLockup(fallbackHTML, size) {
+    const l = brand.logo();
+    return l ? `<img src="${l}" alt="Ananya" data-logo style="height:${size || 52}px;width:auto;max-width:${(size || 52) * 3.4}px;object-fit:contain">` : fallbackHTML;
+  }
+
+  /* ---------- email notification templates ---------- */
+  const EMAIL_DEFAULTS = { enabled: false, publicKey: '', serviceId: '', templateId: '', adminEmail: 'admin@ananya.com', adminName: 'Ananya Store Admin', fromName: 'Ananya' };
+
+  function emailShell(heading, bodyHTML) {
+    return `<div style="font-family:Poppins,Arial,sans-serif;max-width:600px;margin:0 auto;background:#faf5ec;border:1px solid #e7d4a3;border-radius:12px;overflow:hidden">
+      <div style="background:#5c1616;color:#faf5ec;padding:20px 28px">
+        <span style="display:inline-block;width:32px;height:32px;border:1px solid #d9b969;border-radius:50%;text-align:center;line-height:32px;color:#d9b969;font-family:Georgia,serif;font-weight:bold;vertical-align:middle">A</span>
+        <span style="font-family:Georgia,serif;font-size:20px;letter-spacing:3px;vertical-align:middle;margin-left:8px">ANANYA</span>
+      </div>
+      <div style="padding:26px 28px">
+        <h2 style="font-family:Georgia,serif;color:#5c1616;margin:0 0 14px;font-size:20px">${heading}</h2>
+        ${bodyHTML}
+      </div>
+      <div style="background:#f2e8d6;color:#8a7a5c;padding:14px 28px;font-size:12px;text-align:center">Ananya — Where Tradition Meets Excellence · Authorized agent of Sowbhagya</div>
+    </div>`;
+  }
+  function infoRow(label, val) { return `<p style="margin:3px 0;font-size:14px;color:#4b4b4b"><span style="color:#a08a5c">${label}:</span> <strong style="color:#5c1616">${val}</strong></p>`; }
+  function orderItemsTable(o) {
+    const rows = o.items.map(i => `<tr><td style="padding:6px 0;border-bottom:1px solid #eadfc4;color:#5c1616;font-size:14px">${esc(i.name)} <span style="color:#a08a5c">× ${i.qty}</span></td><td style="padding:6px 0;border-bottom:1px solid #eadfc4;text-align:right;color:#5c1616;font-size:14px;white-space:nowrap">${money(i.price * i.qty)}</td></tr>`).join('');
+    return `<table style="width:100%;border-collapse:collapse;margin:8px 0 4px">${rows}
+      <tr><td style="padding-top:10px;text-align:right;color:#5c1616;font-weight:bold">Total</td><td style="padding-top:10px;text-align:right;color:#5c1616;font-weight:bold;white-space:nowrap">${money(o.total)}</td></tr></table>`;
+  }
+  function buildOrderEmail(o, audience, at) {
+    const forAdmin = audience === 'admin';
+    const addr = `${esc(o.shipping.address)}, ${esc(o.shipping.city)}, ${esc(o.shipping.state)} - ${esc(o.shipping.pincode)}`;
+    const heading = forAdmin ? 'New Order Received' : 'Your order is confirmed';
+    const intro = forAdmin
+      ? `<p style="font-size:14px;color:#4b4b4b">A new order has just been placed on the Ananya store.</p>`
+      : `<p style="font-size:14px;color:#4b4b4b">Hi ${esc((o.customer.name || 'there').split(' ')[0])}, thank you for shopping with Ananya! We've received your order and it is now being processed.</p>`;
+    const body = `${intro}
+      <div style="background:#fff;border:1px solid #e7d4a3;border-radius:10px;padding:16px;margin:14px 0">
+        ${infoRow('Order Number', '#' + o.id)}
+        ${infoRow('Customer', esc(o.customer.name))}
+        ${infoRow('Order Date', fmtDateTime(at))}
+        ${infoRow('Payment', esc(o.payment))}
+        ${infoRow('Current Status', titleCase(o.status))}
+        ${forAdmin ? infoRow('Contact', esc(o.customer.email) + ' · ' + esc(o.customer.phone)) : ''}
+      </div>
+      <h3 style="font-family:Georgia,serif;color:#5c1616;font-size:16px;margin:16px 0 4px">Order Summary</h3>
+      ${orderItemsTable(o)}
+      <div style="margin-top:16px">${infoRow('Shipping To', addr)}</div>
+      ${forAdmin
+        ? `<p style="margin-top:18px"><a href="admin.html?tab=orders&order=${o.id}" style="background:#5c1616;color:#faf5ec;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:13px;display:inline-block">Manage Order</a></p>`
+        : `<p style="margin-top:18px;font-size:13px;color:#8a7a5c">You can track your order anytime from your account dashboard. We'll email you as the status changes.</p>`}`;
+    const subject = forAdmin ? `New order ${o.id} — ${money(o.total)}` : `Your Ananya order ${o.id} is confirmed`;
+    const text = `${heading}\nOrder Number: ${o.id}\nCustomer: ${o.customer.name}\nOrder Date: ${fmtDateTime(at)}\nTotal: ${money(o.total)}\nStatus: ${titleCase(o.status)}\n\nItems:\n${o.items.map(i => `- ${i.name} x${i.qty} = ${money(i.price * i.qty)}`).join('\n')}\n\nShip to: ${o.shipping.address}, ${o.shipping.city}, ${o.shipping.state} - ${o.shipping.pincode}`;
+    return { subject, html: emailShell(heading, body), text };
+  }
+  function buildStatusEmail(o, prev, next, note, audience, at) {
+    const forAdmin = audience === 'admin';
+    const heading = forAdmin ? 'Order Status Updated' : `Update on your order ${o.id}`;
+    const intro = forAdmin
+      ? `<p style="font-size:14px;color:#4b4b4b">The status of order #${o.id} has been changed.</p>`
+      : `<p style="font-size:14px;color:#4b4b4b">Hi ${esc((o.customer.name || 'there').split(' ')[0])}, there's an update on your Ananya order.</p>`;
+    const body = `${intro}
+      <div style="background:#fff;border:1px solid #e7d4a3;border-radius:10px;padding:16px;margin:14px 0">
+        ${infoRow('Order Number', '#' + o.id)}
+        <p style="margin:8px 0;font-size:15px"><span style="color:#a08a5c">Status:</span> <span style="text-decoration:line-through;color:#a08a5c">${titleCase(prev)}</span> &nbsp;→&nbsp; <strong style="color:#5c1616">${titleCase(next)}</strong></p>
+        ${infoRow('Date &amp; Time', fmtDateTime(at))}
+        ${note ? infoRow('Remarks', esc(note)) : ''}
+      </div>
+      <h3 style="font-family:Georgia,serif;color:#5c1616;font-size:16px;margin:16px 0 4px">Order Summary</h3>
+      ${orderItemsTable(o)}
+      ${forAdmin ? '' : `<p style="margin-top:18px;font-size:13px;color:#8a7a5c">Track your order anytime from your account dashboard.</p>`}`;
+    const subject = forAdmin ? `Order ${o.id}: ${titleCase(prev)} → ${titleCase(next)}` : `Your Ananya order ${o.id} is now ${titleCase(next)}`;
+    const text = `${heading}\nOrder Number: ${o.id}\nPrevious Status: ${titleCase(prev)}\nNew Status: ${titleCase(next)}\nDate & Time: ${fmtDateTime(at)}${note ? `\nRemarks: ${note}` : ''}\nTotal: ${money(o.total)}`;
+    return { subject, html: emailShell(heading, body), text };
+  }
+
+  /* ---------- notifications (records every email + optional real send via EmailJS) ---------- */
+  const notify = {
+    cfg() { return Object.assign({}, EMAIL_DEFAULTS, read(LS.emailcfg, {})); },
+    saveCfg(patch) { write(LS.emailcfg, Object.assign(this.cfg(), patch)); },
+    ready() { const c = this.cfg(); return !!(c.enabled && c.serviceId && c.templateId && c.publicKey); },
+    outbox() { return read(LS.outbox, []); },
+    clear() { write(LS.outbox, []); },
+    _mark(id, delivery) { const box = this.outbox(); const e = box.find(x => x.id === id); if (e) { e.delivery = delivery; write(LS.outbox, box); } },
+    _record(entry) { const box = this.outbox(); box.unshift(entry); write(LS.outbox, box.slice(0, 300)); this._send(entry); },
+    _sdk(pk) {
+      if (window.emailjs) return Promise.resolve(window.emailjs);
+      return new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        s.onload = () => { try { window.emailjs.init({ publicKey: pk }); } catch (e) {} res(window.emailjs); };
+        s.onerror = rej; document.head.appendChild(s);
+      });
+    },
+    _send(entry) {
+      const c = this.cfg();
+      if (!this.ready()) return; // stays 'logged' — recorded in-app but not actually emailed
+      this._sdk(c.publicKey).then(ej => ej.send(c.serviceId, c.templateId, {
+        to_email: entry.to, to_name: entry.toName, subject: entry.subject,
+        message: entry.text, message_html: entry.html, order_id: entry.orderId, from_name: c.fromName,
+      }, { publicKey: c.publicKey })).then(() => this._mark(entry.id, 'sent')).catch(() => this._mark(entry.id, 'failed'));
+    },
+    _entry(o, audience, mail, kind) {
+      const c = this.cfg();
+      return {
+        id: 'em_' + nextSeq().toString(36), orderId: o.id, kind, audience,
+        to: audience === 'admin' ? c.adminEmail : o.customer.email,
+        toName: audience === 'admin' ? c.adminName : (o.customer.name || ''),
+        subject: mail.subject, html: mail.html, text: mail.text, at: nowISO(),
+        delivery: this.ready() ? 'sending' : 'logged',
+      };
+    },
+    orderPlaced(o) { const at = nowISO(); ['customer', 'admin'].forEach(a => this._record(this._entry(o, a, buildOrderEmail(o, a, at), 'placed'))); },
+    statusChanged(o, prev, next, note) { const at = nowISO(); ['customer', 'admin'].forEach(a => this._record(this._entry(o, a, buildStatusEmail(o, prev, next, note, a, at), 'status'))); },
+  };
 
   function toast(msg, kind) {
     let wrap = document.getElementById('toast-wrap');
@@ -281,14 +420,14 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-6 h-24">
           <a href="index.html" class="flex items-center gap-3 shrink-0">
-            <span class="relative flex items-center justify-center w-14 h-14 rounded-full border-2 border-gold bg-white shadow-sm">
+            ${brandLockup(`<span class="relative flex items-center justify-center w-14 h-14 rounded-full border-2 border-gold bg-white shadow-sm">
               <span class="absolute inset-1 rounded-full border border-gold/40"></span>
               <span class="font-serif text-2xl font-bold text-gold-dark">A</span>
             </span>
             <span class="leading-none">
               <span class="block font-serif text-3xl font-bold tracking-[0.2em] text-gold-dark">ANANYA</span>
               <span class="block text-[10px] tracking-[0.35em] text-maroon/70 mt-1 uppercase">Tradition &middot; Quality &middot; Trust</span>
-            </span>
+            </span>`, 60)}
           </a>
           <form data-search class="hidden md:flex flex-1 max-w-2xl mx-auto">
             <div class="relative w-full">
@@ -468,9 +607,9 @@
 
   /* ---------- expose ---------- */
   window.Ananya = {
-    catalog, cart, auth, orders,
-    money, qs, toast, fmtDate, slugify, esc,
-    STATUS_STYLE, productCard, stars,
+    catalog, cart, auth, orders, brand, notify,
+    money, qs, toast, fmtDate, fmtDateTime, nowISO, titleCase, slugify, esc,
+    STATUS_STYLE, productCard, stars, brandLockup,
     mountLayout, refreshBadges,
     requireAuth(role) {
       const u = auth.current();

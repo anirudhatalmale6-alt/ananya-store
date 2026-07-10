@@ -103,6 +103,8 @@ window.PAGE_INIT = function () {
     order.items.forEach(it => { const p = cat.products.find(x=>x.id===it.id); if (p) p.stock = Math.max(0, p.stock - it.qty); });
     A.catalog.save(cat);
     A.orders.create(order);
+    // fire order-confirmation emails to the customer and the administrator
+    try { A.notify.orderPlaced(order); } catch (e) {}
     A.cart.clear();
     location.href = 'order-confirmation.html?id=' + encodeURIComponent(order.id);
   });

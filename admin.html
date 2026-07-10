@@ -31,6 +31,7 @@ window.PAGE_INIT = function () {
     ['categories','Categories','M7 7h.01M7 3h5a1.99 1.99 0 011.41.59l7 7a2 2 0 010 2.82l-5 5a2 2 0 01-2.82 0l-7-7A1.99 1.99 0 013 7V4a1 1 0 011-1z'],
     ['orders','Orders','M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
     ['customers','Customers','M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87'],
+    ['settings','Settings','M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
   ];
 
   /* ---------------- shell ---------------- */
@@ -42,8 +43,8 @@ window.PAGE_INIT = function () {
       <!-- sidebar -->
       <aside class="hidden lg:flex flex-col w-64 shrink-0 bg-maroon-dark text-cream/80 min-h-screen sticky top-0">
         <a href="index.html" class="flex items-center gap-2.5 px-6 h-20 border-b border-gold/15">
-          <span class="w-10 h-10 rounded-full border-2 border-gold flex items-center justify-center font-serif text-gold-light font-bold text-lg">A</span>
-          <span class="leading-none"><span class="block font-serif text-xl tracking-widest text-cream">ANANYA</span><span class="block text-[9px] tracking-[0.3em] text-gold-light/70 mt-1">ADMIN PANEL</span></span>
+          ${A.brandLockup(`<span class="w-10 h-10 rounded-full border-2 border-gold flex items-center justify-center font-serif text-gold-light font-bold text-lg">A</span>
+          <span class="leading-none"><span class="block font-serif text-xl tracking-widest text-cream">ANANYA</span><span class="block text-[9px] tracking-[0.3em] text-gold-light/70 mt-1">ADMIN PANEL</span></span>`, 40)}
         </a>
         <nav class="flex-1 p-4 space-y-1">
           ${NAV.map(([k,l,ic]) => `<a href="admin.html?tab=${k}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${tab===k?'bg-gold text-maroon-dark shadow':'hover:bg-white/5'}">
@@ -403,14 +404,23 @@ window.PAGE_INIT = function () {
         <div class="flex justify-between mt-1 pt-2 border-t border-gold/15 font-semibold"><span class="text-maroon">Total</span><span class="font-serif text-lg text-maroon">${A.money(o.total)}</span></div>
       </div>
       <label class="field-label">Update Order Status</label>
-      <div class="flex flex-wrap gap-2 mb-4">
+      <p class="text-[11px] text-stone-400 -mt-1 mb-2">Current: <span class="badge ${A.STATUS_STYLE[o.status]}">${o.status}</span> — pick a new status to notify the customer &amp; admin by email.</p>
+      <div class="flex flex-wrap gap-2 mb-3">
         ${A.orders.statuses().map(s => `<button data-set-status="${s}" class="px-3.5 py-2 rounded-full text-xs font-medium capitalize transition ${o.status===s?'bg-maroon text-cream ring-2 ring-gold':'bg-cream border border-gold/25 text-maroon hover:border-gold/50'}">${s}</button>`).join('')}
       </div>
+      <div class="mb-4"><label class="field-label">Remarks / Note <span class="text-stone-400 font-normal">— optional, included in the email</span></label><textarea id="status-note" rows="2" placeholder="e.g. Dispatched via BlueDart, tracking #..." class="field"></textarea></div>
+      ${(o.history && o.history.length) ? `<div class="card p-3 mb-4 max-h-40 overflow-y-auto no-scrollbar"><p class="text-[11px] uppercase tracking-wide text-stone-400 mb-2">Status History</p>${o.history.slice().reverse().map(h => `<div class="flex items-start gap-2 py-1 text-xs"><span class="text-stone-400 whitespace-nowrap">${A.fmtDateTime(h.at)}</span><span class="text-maroon"><span class="capitalize text-stone-400">${h.from}</span> → <span class="capitalize font-medium">${h.to}</span>${h.note?` · <span class="text-stone-500">${A.esc(h.note)}</span>`:''}</span></div>`).join('')}</div>` : ''}
       <div class="flex gap-3"><a href="order-confirmation.html?id=${o.id}" target="_blank" class="btn-outline flex-1 py-2.5 text-center text-sm">View Receipt</a><button data-close class="btn-maroon px-6">Done</button></div>`, true);
     host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
     host.querySelectorAll('[data-set-status]').forEach(b => b.addEventListener('click', () => {
-      A.orders.updateStatus(o.id, b.getAttribute('data-set-status'));
-      A.toast('Order status updated to ' + b.getAttribute('data-set-status'));
+      const next = b.getAttribute('data-set-status');
+      const note = (host.querySelector('#status-note') || {}).value ? host.querySelector('#status-note').value.trim() : '';
+      if (next === o.status && !note) { A.toast('Order is already ' + next); return; }
+      const prev = o.status;
+      const res = A.orders.updateStatus(o.id, next, note);
+      // email both the customer and the administrator about the change
+      try { A.notify.statusChanged(res ? res.order : A.orders.byId(o.id), prev, next, note); } catch (e) {}
+      A.toast(A.notify.ready() ? 'Status updated — emails sent' : 'Status updated — notifications logged');
       closeModal(); render();
     }));
   }
@@ -440,6 +450,104 @@ window.PAGE_INIT = function () {
     host.querySelectorAll('[data-open-order]').forEach(b => b.addEventListener('click', () => orderModal(b.getAttribute('data-open-order'))));
   }
 
+  /* ---------------- settings (branding + email notifications) ---------------- */
+  const defaultMonogram = '<span class="relative flex items-center justify-center w-14 h-14 rounded-full border-2 border-gold bg-white"><span class="font-serif text-2xl font-bold text-gold-dark">A</span></span>';
+
+  function settings() {
+    const cfg = A.notify.cfg();
+    const box = A.notify.outbox();
+    const logo = A.brand.logo();
+    const ready = A.notify.ready();
+
+    const logoCard = `
+      <div class="card p-6">
+        <h3 class="font-serif text-xl text-maroon mb-1">Brand Logo</h3>
+        <p class="text-xs text-stone-500 mb-4">Upload your logo — it instantly replaces the placeholder across the storefront header, login page, this admin panel and the email receipts.</p>
+        <div class="flex items-center gap-5 flex-wrap">
+          <div id="logo-prev" class="w-40 h-24 rounded-xl bg-cream-dark/40 border border-gold/20 flex items-center justify-center p-3 shrink-0">${logo ? `<img src="${logo}" class="max-h-full max-w-full object-contain">` : defaultMonogram}</div>
+          <div class="flex-1 min-w-[220px] space-y-2">
+            <label class="btn-outline py-2 px-4 text-sm cursor-pointer inline-block">Upload Logo<input id="logo-file" type="file" accept="image/*" class="hidden"></label>
+            <input id="logo-url" placeholder="…or paste an image URL" class="field">
+            <div class="flex gap-2 pt-1">
+              <button id="logo-save" class="btn-maroon py-2 px-5 text-sm">Save Logo</button>
+              <button id="logo-remove" class="btn-outline py-2 px-4 text-sm ${logo ? '' : 'opacity-40 pointer-events-none'}">Remove</button>
+            </div>
+            <p class="text-[11px] text-stone-400">PNG with a transparent background works best. Recommended height ~120px.</p>
+          </div>
+        </div>
+      </div>`;
+
+    const emailCard = `
+      <div class="card p-6">
+        <div class="flex items-center justify-between gap-3 mb-1 flex-wrap"><h3 class="font-serif text-xl text-maroon">Email Notifications</h3>
+          <span class="badge ${ready ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${ready ? 'Live — sending real emails' : 'Demo — logging only'}</span></div>
+        <p class="text-xs text-stone-500 mb-4">Customers and the administrator are notified automatically when an order is placed and whenever its status changes. On this static site, real delivery is powered by EmailJS (free tier) — paste your keys below and enable to switch from demo logging to live sending. When you move to your own hosting/domain, the same events can be wired to server-side mail instead.</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="field-label">Administrator Email *</label><input id="cfg-admin" value="${A.esc(cfg.adminEmail)}" class="field"></div>
+          <div><label class="field-label">From Name</label><input id="cfg-from" value="${A.esc(cfg.fromName)}" class="field"></div>
+          <div><label class="field-label">EmailJS Service ID</label><input id="cfg-service" value="${A.esc(cfg.serviceId)}" placeholder="service_xxxxxxx" class="field"></div>
+          <div><label class="field-label">EmailJS Template ID</label><input id="cfg-template" value="${A.esc(cfg.templateId)}" placeholder="template_xxxxxxx" class="field"></div>
+          <div class="sm:col-span-2"><label class="field-label">EmailJS Public Key</label><input id="cfg-key" value="${A.esc(cfg.publicKey)}" placeholder="Your EmailJS public key" class="field"></div>
+        </div>
+        <label class="flex items-center gap-2.5 text-sm text-stone-600 mt-4"><input id="cfg-enabled" type="checkbox" ${cfg.enabled ? 'checked' : ''} class="accent-maroon w-4 h-4"> Enable live email sending via EmailJS</label>
+        <div class="flex flex-wrap gap-2 mt-4"><button id="cfg-save" class="btn-maroon py-2.5 px-6 text-sm">Save Settings</button><button id="cfg-test" class="btn-outline py-2.5 px-5 text-sm">Send Test Notification</button></div>
+      </div>`;
+
+    const badgeFor = d => ({ sent: 'bg-green-100 text-green-700', sending: 'bg-blue-100 text-blue-700', logged: 'bg-stone-200 text-stone-600', failed: 'bg-red-100 text-red-600' }[d] || 'bg-stone-200 text-stone-600');
+    const logRows = box.length ? box.map(e => `
+      <div class="flex items-center gap-3 py-2.5 border-b border-gold/8 last:border-0">
+        <span class="w-9 h-9 rounded-lg ${e.audience === 'admin' ? 'bg-maroon/10 text-maroon' : 'bg-gold/15 text-gold-dark'} flex items-center justify-center shrink-0" title="To ${e.audience}"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></span>
+        <div class="min-w-0 flex-1"><p class="text-sm text-maroon line-clamp-1">${A.esc(e.subject)}</p><p class="text-[11px] text-stone-400 line-clamp-1">to ${A.esc(e.to)} · ${A.fmtDateTime(e.at)}</p></div>
+        <span class="badge ${badgeFor(e.delivery)} capitalize shrink-0 hidden sm:inline-flex">${e.delivery}</span>
+        <button data-view-email="${e.id}" class="btn-outline py-1.5 px-3 text-xs shrink-0">Preview</button>
+      </div>`).join('') : '<p class="text-sm text-stone-400 py-8 text-center">No notifications yet. Place an order or change an order status to generate emails.</p>';
+
+    const logCard = `
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-3"><h3 class="font-serif text-xl text-maroon">Notification Log <span class="text-sm text-stone-400 font-sans">(${box.length})</span></h3>${box.length ? '<button id="clear-log" class="text-xs text-red-500 hover:text-red-600">Clear log</button>' : ''}</div>
+        <div class="max-h-96 overflow-y-auto no-scrollbar">${logRows}</div>
+      </div>`;
+
+    return `<div class="grid gap-6 max-w-4xl">${logoCard}${emailCard}${logCard}</div>`;
+  }
+
+  function emailPreviewModal(id) {
+    const e = A.notify.outbox().find(x => x.id === id);
+    if (!e) return;
+    openModal(`
+      <div class="flex items-center justify-between mb-3"><div><h3 class="font-serif text-xl text-maroon">Email Preview</h3><p class="text-xs text-stone-400">To ${A.esc(e.to)} (${e.audience}) · <span class="capitalize">${e.delivery}</span></p></div><button data-close class="text-stone-400 hover:text-maroon text-2xl leading-none">&times;</button></div>
+      <div class="text-xs text-stone-500 mb-3"><span class="text-stone-400">Subject:</span> <span class="text-maroon font-medium">${A.esc(e.subject)}</span></div>
+      <div class="rounded-xl border border-gold/20 overflow-hidden bg-white max-h-[60vh] overflow-y-auto">${e.html}</div>
+      <div class="flex justify-end mt-4"><button data-close class="btn-maroon px-6">Close</button></div>`, true);
+    host.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+  }
+
+  function wireSettings() {
+    const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    // --- logo ---
+    let pendingLogo = A.brand.logo() || '';
+    const prev = document.getElementById('logo-prev');
+    const drawLogoPrev = () => { if (prev) prev.innerHTML = pendingLogo ? `<img src="${pendingLogo}" class="max-h-full max-w-full object-contain">` : defaultMonogram; };
+    const lf = document.getElementById('logo-file');
+    if (lf) lf.addEventListener('change', async e => { if (e.target.files[0]) { pendingLogo = await fileToDataURL(e.target.files[0]); const u = document.getElementById('logo-url'); if (u) u.value = ''; drawLogoPrev(); } });
+    const lu = document.getElementById('logo-url'); if (lu) lu.addEventListener('input', e => { pendingLogo = e.target.value.trim(); drawLogoPrev(); });
+    const lsave = document.getElementById('logo-save'); if (lsave) lsave.addEventListener('click', () => { A.brand.setLogo(pendingLogo || null); A.toast(pendingLogo ? 'Logo updated across the store' : 'Logo cleared'); render(); });
+    const lrem = document.getElementById('logo-remove'); if (lrem) lrem.addEventListener('click', () => { A.brand.setLogo(null); A.toast('Logo removed — using default'); render(); });
+    // --- email config ---
+    const collect = () => ({ adminEmail: val('cfg-admin'), fromName: val('cfg-from'), serviceId: val('cfg-service'), templateId: val('cfg-template'), publicKey: val('cfg-key'), enabled: !!(document.getElementById('cfg-enabled') || {}).checked });
+    const save = document.getElementById('cfg-save'); if (save) save.addEventListener('click', () => { A.notify.saveCfg(collect()); A.toast('Notification settings saved'); render(); });
+    const test = document.getElementById('cfg-test'); if (test) test.addEventListener('click', () => {
+      A.notify.saveCfg(collect());
+      const sample = A.orders.all().slice().sort((a, b) => b.placedAt.localeCompare(a.placedAt))[0];
+      if (!sample) { A.toast('No orders yet to sample', 'error'); return; }
+      A.notify.orderPlaced(sample);
+      A.toast(A.notify.ready() ? 'Test emails sent to customer & admin' : 'Test notifications logged (demo mode)'); render();
+    });
+    // --- log ---
+    document.querySelectorAll('[data-view-email]').forEach(b => b.addEventListener('click', () => emailPreviewModal(b.getAttribute('data-view-email'))));
+    const cl = document.getElementById('clear-log'); if (cl) cl.addEventListener('click', () => { if (confirm('Clear all notification log entries?')) { A.notify.clear(); A.toast('Log cleared'); render(); } });
+  }
+
   /* ---------------- render + wiring ---------------- */
   function render() {
     let content, title, subtitle, action = '';
@@ -453,6 +561,8 @@ window.PAGE_INIT = function () {
       content = ordersView(); title = 'Orders'; subtitle = 'View and fulfil customer orders';
     } else if (tab === 'customers') {
       content = customers(); title = 'Customers'; subtitle = 'Your registered shoppers';
+    } else if (tab === 'settings') {
+      content = settings(); title = 'Settings'; subtitle = 'Branding & email notifications';
     } else {
       content = dashboard(); title = 'Dashboard'; subtitle = 'Welcome back, ' + u.name.split(' ')[0];
     }
@@ -480,6 +590,7 @@ window.PAGE_INIT = function () {
     }));
     document.querySelectorAll('[data-view-order]').forEach(b => b.addEventListener('click', () => orderModal(b.getAttribute('data-view-order'))));
     document.querySelectorAll('[data-view-cust]').forEach(b => b.addEventListener('click', () => customerModal(b.getAttribute('data-view-cust'))));
+    if (tab === 'settings') wireSettings();
 
     // product search (client-side, updates URL param)
     document.querySelectorAll('form[data-pq]').forEach(f => f.addEventListener('submit', e => {
