@@ -51,8 +51,8 @@
 <script>
 window.PAGE_INIT = function () {
   const A = window.Ananya;
-  // swap in the uploaded brand logo if one has been set
-  if (A.brand.logo()) { const el = document.getElementById('login-logo'); if (el) { el.className = 'inline-flex items-center justify-center mb-3'; el.innerHTML = `<img src="${A.brand.logo()}" alt="Ananya" style="height:64px;width:auto;max-width:220px;object-fit:contain">`; } }
+  // show the brand logo (uploaded override or bundled default)
+  { const el = document.getElementById('login-logo'); if (el) { el.className = 'inline-flex items-center justify-center mb-3'; el.innerHTML = `<img src="${A.brand.logoSrc()}" alt="Ananya" onerror="this.style.display='none'" style="height:70px;width:auto;max-width:260px;object-fit:contain">`; } }
   const next = A.qs('next') || '';
   // Administrators always land on the Admin Dashboard, regardless of any "next" target.
   // Other roles follow their intended destination, then their account dashboard.

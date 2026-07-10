@@ -246,14 +246,16 @@
   const titleCase = s => String(s || '').replace(/\b\w/g, c => c.toUpperCase());
 
   /* ---------- brand / logo ---------- */
+  const DEFAULT_LOGO = 'img/logo-ananya.png';
   const brand = {
     logo() { return read(LS.logo, null); },
+    logoSrc() { return this.logo() || DEFAULT_LOGO; },
     setLogo(url) { if (url) write(LS.logo, url); else localStorage.removeItem(LS.logo); },
   };
-  // Returns an <img> of the uploaded logo, or the supplied fallback markup (monogram + wordmark).
+  // Returns an <img> of the brand logo (uploaded override or bundled default). Fallback markup kept for safety.
   function brandLockup(fallbackHTML, size) {
-    const l = brand.logo();
-    return l ? `<img src="${l}" alt="Ananya" data-logo style="height:${size || 52}px;width:auto;max-width:${(size || 52) * 3.4}px;object-fit:contain">` : fallbackHTML;
+    const l = brand.logoSrc();
+    return l ? `<img src="${l}" alt="Ananya" data-logo onerror="this.style.display='none'" style="height:${size || 52}px;width:auto;max-width:${(size || 52) * 5}px;object-fit:contain">` : fallbackHTML;
   }
 
   /* ---------- email notification templates ---------- */
@@ -607,7 +609,7 @@
 
   /* ---------- expose ---------- */
   window.Ananya = {
-    catalog, cart, auth, orders, brand, notify,
+    catalog, cart, auth, orders, brand, notify, DEFAULT_LOGO,
     money, qs, toast, fmtDate, fmtDateTime, nowISO, titleCase, slugify, esc,
     STATUS_STYLE, productCard, stars, brandLockup,
     mountLayout, refreshBadges,
